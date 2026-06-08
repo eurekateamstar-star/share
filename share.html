@@ -1,158 +1,247 @@
+好的！我們要把這份「公差任務總覽」的清單分成兩區塊：
+
+1.  即將到來（未過期）的任務：排在上方，日期由近到遠（最快發生的在最上面）。
+2.  已過期（過去一個月內）的任務：排在下方，加上視覺上的灰階淡化效果，方便承辦人查閱歷史紀錄，日期由新到舊排序（剛過期的在最上面）。
+
+請打開您的 share.html (或 index.html)，將裡面的程式碼 全部刪除，替換成下面這段：
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>公差任務報名名單</title>
-    <!-- 引入 Tailwind CSS 與 FontAwesome -->
+    <title>海山救護義消 - 公差任務總覽</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { background: #f1f5f9; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        body { background: #f8fafc; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
         .font-num { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.02em; }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* 過期任務的視覺效果 */
+        .expired-card { opacity: 0.6; filter: grayscale(0.8); transition: all 0.3s; }
+        .expired-card:hover { opacity: 1; filter: grayscale(0); }
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div id="app" class="max-w-xl mx-auto">
-        <!-- 狀態 1：載入中 -->
-        <div v-if="loading" class="text-center py-32">
+    <div id="app" class="max-w-2xl mx-auto pb-10">
+        
+        <!-- 頁首 -->
+        <div class="mb-8 text-center pt-4">
+            <div class="w-16 h-16 bg-rose-600 text-white rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg shadow-rose-200">
+                <i class="fa-solid fa-clipboard-list"></i>
+            </div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight">公差任務總覽</h1>
+            <p class="text-xs font-bold text-slate-400 mt-2 tracking-widest uppercase">Official Duty Missions Overview</p>
+        </div>
+
+        <!-- 載入中畫面 -->
+        <div v-if="loading" class="text-center py-20">
             <i class="fa-solid fa-spinner fa-spin text-5xl text-rose-500 mb-4 drop-shadow-md"></i>
-            <p class="text-slate-500 font-bold tracking-widest">資料同步中...</p>
+            <p class="text-slate-500 font-bold tracking-widest">資料即時同步中...</p>
         </div>
 
-        <!-- 狀態 2：錯誤或找不到任務 -->
-        <div v-else-if="error" class="text-center py-20 bg-white rounded-[32px] shadow-lg border border-slate-100 mt-10">
-            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-file-circle-xmark text-4xl text-slate-300"></i>
-            </div>
-            <h2 class="text-xl font-black text-slate-700 mb-2">找不到此任務</h2>
-            <p class="text-sm font-bold text-slate-400">請確認您的網址是否正確，或該任務已被刪除。</p>
-        </div>
-
-        <!-- 狀態 3：正常顯示資料 -->
-        <div v-else class="space-y-6">
-            
-            <!-- 任務詳細資訊卡片 -->
-            <div class="bg-white rounded-[32px] shadow-lg border border-slate-100 overflow-hidden">
-                <div class="bg-rose-50 border-b border-rose-100 p-6 md:p-8 relative overflow-hidden">
-                    <i class="fa-solid fa-clipboard-check absolute -right-6 -top-6 text-8xl text-rose-500 opacity-5 -rotate-12"></i>
-                    <span class="text-[10px] font-black text-rose-600 bg-rose-200/50 border border-rose-200 px-3 py-1 rounded-lg uppercase tracking-widest mb-3 inline-block">公差任務明細</span>
-                    <h1 class="text-2xl md:text-3xl font-black text-slate-800 leading-tight relative z-10">{{ task.title }}</h1>
-                </div>
-                <div class="p-6 md:p-8 space-y-5 relative z-10">
-                    <div class="flex items-start gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center shrink-0 border border-slate-100"><i class="fa-regular fa-calendar-check text-lg"></i></div>
-                        <div class="flex-1 pt-1"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">任務日期</p><p class="text-base font-num text-slate-800">{{ task.date }}</p></div>
-                    </div>
-                    <div class="flex items-start gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center shrink-0 border border-slate-100"><i class="fa-regular fa-clock text-lg"></i></div>
-                        <div class="flex-1 pt-1"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">服勤時間</p><p class="text-base font-num text-slate-800">{{ task.startTime }} - {{ task.endTime }}</p></div>
-                    </div>
-                    <div class="flex items-start gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center shrink-0 border border-slate-100"><i class="fa-solid fa-location-dot text-lg"></i></div>
-                        <div class="flex-1 pt-1"><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">集合地點</p><p class="text-base font-bold text-slate-800">{{ task.location }}</p></div>
-                    </div>
-                    
-                    <div v-if="task.note" class="bg-rose-50/50 p-4 rounded-2xl text-sm font-bold text-rose-700 border border-rose-100 mt-4 leading-relaxed">
-                        <i class="fa-solid fa-circle-info mr-1 opacity-70"></i> 備註事項：<br>{{ task.note }}
-                    </div>
-                </div>
+        <div v-else class="space-y-10 fade-in">
+            <!-- 完全沒有任務時 -->
+            <div v-if="upcomingTasks.length === 0 && expiredTasks.length === 0" class="text-center py-16 bg-white rounded-3xl border border-slate-200 border-dashed">
+                <i class="fa-solid fa-calendar-xmark text-4xl text-slate-300 mb-3"></i>
+                <p class="text-slate-500 font-bold">目前沒有任何公差任務</p>
             </div>
 
-            <!-- 報名名單卡片 -->
-            <div class="bg-white rounded-[32px] shadow-lg border border-slate-100 overflow-hidden">
-                <div class="p-6 md:p-8 flex justify-between items-end border-b border-slate-50 bg-slate-50/50">
-                    <div>
-                        <h2 class="text-xl md:text-2xl font-black text-slate-800">已登記名單</h2>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Participant List</p>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">人數</span>
-                        <span class="text-4xl font-num font-black text-rose-500">{{ registrations.length }}</span>
-                        <span class="text-sm text-slate-400 font-bold ml-0.5">/ {{ task.quota }}</span>
-                    </div>
+            <!-- 🟢 區塊一：即將到來 (未過期) 的任務 -->
+            <div v-if="upcomingTasks.length > 0">
+                <div class="flex items-center gap-3 mb-4 pl-2">
+                    <div class="w-2 h-6 bg-rose-500 rounded-full"></div>
+                    <h2 class="text-xl font-black text-slate-800">即將執行任務</h2>
+                    <span class="text-xs font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded-lg">{{ upcomingTasks.length }}</span>
                 </div>
                 
-                <div class="p-6 md:p-8">
-                    <!-- 沒人報名時 -->
-                    <div v-if="registrations.length === 0" class="text-center py-10 text-slate-300 font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <i class="fa-solid fa-user-group text-3xl mb-3 opacity-50 block"></i>
-                        目前尚未有人員登記
+                <div class="space-y-5">
+                    <!-- 使用元件化方式渲染卡片，傳入 task -->
+                    <task-card v-for="task in upcomingTasks" :key="task.id" :task="task" :registrations="registrations"></task-card>
+                </div>
+            </div>
+
+            <!-- 🔴 區塊二：已過期 (過去一個月內) 的任務 -->
+            <div v-if="expiredTasks.length > 0">
+                <div class="flex items-center gap-3 mb-4 pl-2 mt-8">
+                    <div class="w-2 h-6 bg-slate-300 rounded-full"></div>
+                    <h2 class="text-xl font-black text-slate-600">已結束任務 <span class="text-xs font-bold text-slate-400 ml-2">(過去一個月內)</span></h2>
+                    <span class="text-xs font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-lg">{{ expiredTasks.length }}</span>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- 過期的任務加上 expired-card 樣式 -->
+                    <task-card v-for="task in expiredTasks" :key="task.id" :task="task" :registrations="registrations" class="expired-card"></task-card>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-center text-[10px] text-slate-300 font-black mt-10 uppercase tracking-widest">
+            <i class="fa-solid fa-shield-halved mr-1"></i> 海山救護義消 智慧管理系統
+        </p>
+    </div>
+
+    <!-- ===== 定義 Vue 元件：任務卡片 (讓程式碼更乾淨) ===== -->
+    <template id="task-card-template">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
+            <div class="p-5 md:p-6 border-b border-slate-100 flex flex-col sm:flex-row gap-5 relative overflow-hidden">
+                
+                <div class="w-full sm:w-20 bg-rose-50 border border-rose-100 rounded-2xl p-3 flex sm:flex-col justify-center items-center shrink-0 gap-2 sm:gap-0 relative z-10">
+                    <span class="text-[10px] font-black text-rose-500 uppercase">{{ getWeekday(task.date) }}</span>
+                    <span class="text-xl md:text-2xl font-num font-black text-slate-800 leading-none sm:mt-1">{{ task.date.substring(5).replace('-', '/') }}</span>
+                </div>
+                
+                <div class="flex-1 min-w-0 relative z-10">
+                    <div class="flex justify-between items-start mb-1">
+                        <h2 class="text-lg md:text-xl font-black text-slate-800 leading-tight pr-2">{{ task.title }}</h2>
+                        <span class="shrink-0 bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1">
+                            <i class="fa-solid fa-user"></i> {{ regCount }} / {{ task.quota }}
+                        </span>
                     </div>
                     
-                    <!-- 有人報名時 (網格排列) -->
-                    <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
-                        <div v-for="(reg, index) in registrations" :key="index" class="bg-white border-2 border-slate-100 rounded-2xl p-3 flex items-center gap-3 shadow-sm transition-all hover:border-rose-200">
-                            <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center font-num font-black text-xs shrink-0">
-                                {{ index + 1 }}
-                            </div>
-                            <span class="font-black text-slate-700 text-sm md:text-base truncate">{{ reg.userName }}</span>
+                    <div class="mt-3 space-y-1.5">
+                        <p class="text-sm font-bold text-slate-600 flex items-center gap-2">
+                            <i class="fa-regular fa-clock text-rose-400 w-4 text-center"></i> {{ task.startTime }} - {{ task.endTime }}
+                        </p>
+                        <p class="text-sm font-bold text-slate-600 flex items-start gap-2">
+                            <i class="fa-solid fa-location-dot text-rose-400 w-4 text-center mt-0.5"></i> 
+                            <span class="flex-1">{{ task.location }}</span>
+                        </p>
+                    </div>
+                    
+                    <div v-if="task.note" class="mt-3 bg-slate-50 p-3 rounded-xl text-xs font-bold text-slate-500 border border-slate-100 leading-relaxed">
+                        <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i> {{ task.note }}
+                    </div>
+                </div>
+                <!-- 已結束浮水印 (僅在卡片有 expired-card 類別時顯示，由父層控制) -->
+                <div v-if="isExpired" class="absolute -right-4 -bottom-4 text-slate-100 text-[80px] -rotate-12 pointer-events-none font-black opacity-50 z-0">
+                    END
+                </div>
+            </div>
+
+            <div class="bg-slate-50/50">
+                <button @click="showList = !showList" class="w-full p-4 flex items-center justify-between text-sm font-black text-slate-600 hover:bg-slate-50 transition-colors">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-users text-rose-400"></i> 
+                        查看登記名單 <span class="text-rose-500 font-num">({{ regCount }})</span>
+                    </span>
+                    <i class="fa-solid text-slate-400 transition-transform duration-300" :class="showList ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                </button>
+                
+                <div v-show="showList" class="p-5 pt-0 border-t border-slate-100 border-dashed mt-1 fade-in">
+                    <div v-if="regCount === 0" class="text-center py-4 text-xs font-bold text-slate-400">
+                        目前尚未有人員登記
+                    </div>
+                    <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-4">
+                        <div v-for="name in regNames" :key="name" class="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-center shadow-sm">
+                            <span class="font-black text-slate-700 text-sm truncate">{{ name }}</span>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <p class="text-center text-[10px] text-slate-300 font-black mt-8 mb-4 uppercase tracking-widest">
-                <i class="fa-solid fa-shield-halved mr-1"></i> 海山救護義消 智慧管理系統
-            </p>
         </div>
-    </div>
+    </template>
 
     <!-- 引入 Vue 與 Firebase -->
     <script type="module">
-        import { createApp, ref, onMounted } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
+        import { createApp, ref, onMounted, computed } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // 您的 Firebase Config
         const firebaseConfig = { apiKey:"AIzaSyCzxANy8mkN8BzsGr0SDvGLW_AJ43kRQ1Q", authDomain:"star-c5e91.firebaseapp.com", projectId:"star-c5e91", storageBucket:"star-c5e91.firebasestorage.app", messagingSenderId:"804810488246", appId:"1:804810488246:web:477340ff049b90ed68e917" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        createApp({
+        // 建立 Vue APP
+        const vueApp = createApp({
             setup() {
                 const loading = ref(true);
-                const error = ref(false);
-                const task = ref({});
+                const upcomingTasks = ref([]);
+                const expiredTasks = ref([]);
                 const registrations = ref([]);
 
+                // 取得今天的日期字串 (YYYY-MM-DD) 作為判斷過期標準
+                const getTodayStr = () => {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                };
+
                 onMounted(async () => {
-                    // 解析網址上的 ?id=XXXXXX
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const taskId = urlParams.get('id');
-
-                    // 如果網址沒有帶 ID，直接顯示錯誤
-                    if (!taskId) {
-                        error.value = true;
-                        loading.value = false;
-                        return;
-                    }
-
                     try {
-                        // 1. 去資料庫抓這個 ID 的任務詳情
-                        const taskDoc = await getDoc(doc(db, "official_tasks", taskId));
-                        if (!taskDoc.exists()) throw new Error("Task not found");
-                        task.value = taskDoc.data();
-
-                        // 2. 去資料庫抓有報名這個 ID 任務的名單
-                        const q = query(collection(db, "registrations"), where("taskId", "==", taskId), where("status", "==", "出席"));
-                        const snap = await getDocs(q);
+                        // 1. 抓取「所有」公差任務
+                        const taskQuery = query(collection(db, "official_tasks"));
+                        const taskSnap = await getDocs(taskQuery);
                         
-                        // 將名單提取出來
-                        registrations.value = snap.docs.map(d => d.data());
+                        // 計算「一個月前」與「今天」的日期字串
+                        const todayStr = getTodayStr();
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                        const oneMonthAgoStr = `${oneMonthAgo.getFullYear()}-${String(oneMonthAgo.getMonth() + 1).padStart(2, '0')}-${String(oneMonthAgo.getDate()).padStart(2, '0')}`;
+
+                        const allTasks = taskSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                        // 🟢 分類：即將到來 (日期 >= 今天) -> 日期由小到大排序 (最近的在上面)
+                        upcomingTasks.value = allTasks
+                            .filter(t => t.date >= todayStr)
+                            .sort((a, b) => a.date.localeCompare(b.date));
+
+                        // 🔴 分類：已過期 (一個月前 <= 日期 < 今天) -> 日期由大到小排序 (剛過期的在上面)
+                        expiredTasks.value = allTasks
+                            .filter(t => t.date < todayStr && t.date >= oneMonthAgoStr)
+                            .sort((a, b) => b.date.localeCompare(a.date));
+
+                        // 2. 抓取「所有」報名資料
+                        const regSnap = await getDocs(collection(db, "registrations"));
+                        registrations.value = regSnap.docs
+                            .map(d => d.data())
+                            .filter(r => r.type === 'duty' && r.status === '出席');
 
                     } catch (e) {
-                        console.error("讀取失敗:", e);
-                        error.value = true;
+                        console.error("資料讀取失敗:", e);
                     } finally {
                         loading.value = false;
                     }
                 });
 
-                return { loading, error, task, registrations };
+                return { loading, upcomingTasks, expiredTasks, registrations };
             }
-        }).mount('#app');
+        });
+
+        // 註冊子元件：任務卡片
+        vueApp.component('task-card', {
+            template: '#task-card-template',
+            props: ['task', 'registrations'],
+            setup(props) {
+                const showList = ref(false);
+
+                const getWeekday = (dateStr) => { 
+                    if (!dateStr) return ''; 
+                    const w = ['週日','週一','週二','週三','週四','週五','週六']; 
+                    return w[new Date(dateStr).getDay()]; 
+                };
+
+                const regNames = computed(() => {
+                    return props.registrations
+                        .filter(r => r.taskId === props.task.id)
+                        .map(r => r.userName);
+                });
+
+                const regCount = computed(() => regNames.value.length);
+
+                // 判斷是否為過期任務 (只為了顯示浮水印用)
+                const isExpired = computed(() => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    return props.task.date < todayStr;
+                });
+
+                return { showList, getWeekday, regNames, regCount, isExpired };
+            }
+        });
+
+        vueApp.mount('#app');
     </script>
 </body>
 </html>
